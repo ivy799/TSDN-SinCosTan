@@ -4,43 +4,76 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import pyreadstat
 from joblib import load
+import matplotlib.pyplot as plt
+import seaborn as sns
+# Cache the model loading
+@st.cache(allow_output_mutation=True)
+def load_model():
+    return load('xgb_model.joblib')
 
-# Load dataset
-data, meta = pyreadstat.read_sav('Dataset Final.sav')
+# Contoh HTML
+html_content = """
+<div style='background-color:lightblue; padding:10px;'>
+    <h2>Selamat Datang di Aplikasi Saya</h2>
+    <p>Ini adalah contoh teks HTML yang disisipkan dalam aplikasi Streamlit.</p>
+</div>
+"""
 
-# Load pre-trained XGBoost model
-xgb_model = load('xgb_model.joblib')
+# Menampilkan HTML di Streamlit
+st.markdown(html_content, unsafe_allow_html=True)
+
+xgb_model = load_model()
+
+# Cache the dataset loading and preprocessing
+@st.cache
+def load_and_preprocess_data():
+    data, meta = pyreadstat.read_sav('Dataset Final.sav')
+    if data.isnull().sum().sum() > 0:
+        data = data.dropna()
+    columns_to_drop = ['Pulau', 'B1R1', 'weight_final', 'filter_$']
+    data = data.drop(columns=columns_to_drop, errors='ignore')
+    X = data.drop(columns=['Y'])
+    y = data['Y']
+    return train_test_split(X, y, test_size=0.2, random_state=42), X, data
+
+(X_train, X_test, y_train, y_test), X, data = load_and_preprocess_data()
 
 # EDA
 st.title("Obesity Prediction App")
 st.write("## Exploratory Data Analysis")
 
+# Dataset Overview
 st.write("### Dataset Overview")
 st.write(data.head())
 
+# Dataset Description
 st.write("### Dataset Description")
 st.write(data.describe())
 
-# Handle missing values if any
-if data.isnull().sum().sum() > 0:
-    st.warning("The dataset contains null values. These will be dropped.")
-    data = data.dropna()
+# Visualizations
+st.write("## Data Visualizations")
 
-# Drop unnecessary columns
-columns_to_drop = ['Pulau', 'B1R1', 'weight_final', 'filter_$']
-data = data.drop(columns=columns_to_drop, errors='ignore')
+# Histogram
+st.write("### Histogram of Features")
+fig, ax = plt.subplots(figsize=(10, 6))
+data.hist(ax=ax)
+st.pyplot(fig)
 
-# Define features and target
-X = data.drop(columns=['Y'])
-y = data['Y']
+# Box Plot
+st.write("### Box Plot of Features")
+fig, ax = plt.subplots(figsize=(10, 6))
+sns.boxplot(data=data, ax=ax)
+st.pyplot(fig)
 
-# Split data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Correlation Heatmap
+st.write("### Correlation Heatmap")
+fig, ax = plt.subplots(figsize=(10, 6))
+sns.heatmap(data.corr(), annot=True, cmap='coolwarm', ax=ax)
+st.pyplot(fig)
 
 # Prediction using loaded XGBoost model
 y_pred = xgb_model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
-
 st.write(f"### Model Accuracy (XGBoost): {accuracy:.2f}")
 
 # User input
