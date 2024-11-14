@@ -12,36 +12,36 @@ import base64
 from io import BytesIO
 
 # Cache the model loading
-@st.cache(allow_output_mutation=True)
+@st.cache_resource
 def load_model():
     return load('xgb_model.joblib')
 
-# Contoh HTML
-html_content = """
-<div style='background-color:lightblue; padding:10px;'>
-    <h2>Selamat Datang di Aplikasi Saya</h2>
-    <p>Ini adalah contoh teks HTML yang disisipkan dalam aplikasi Streamlit.</p>
-</div>
-"""
+# # Contoh HTML
+# html_content = """
+# <div style='background-color:lightblue; padding:10px;'>
+#     <h2>Selamat Datang di Aplikasi Saya</h2>
+#     <p>Ini adalah contoh teks HTML yang disisipkan dalam aplikasi Streamlit.</p>
+# </div>
+# """
 
 # Menampilkan HTML di Streamlit
-st.markdown(html_content, unsafe_allow_html=True)
+# st.markdown(html_content, unsafe_allow_html=True)
 
 xgb_model = load_model()
 
 # Cache the dataset loading and preprocessing
-@st.cache
+@st.cache_data
 def load_and_preprocess_data():
     data, meta = pyreadstat.read_sav('Dataset Final.sav')
     if data.isnull().sum().sum() > 0:
         data = data.dropna()
-    columns_to_drop = ['B1R1', 'weight_final', 'filter_$']  # 'Pulau' column is not dropped
+    columns_to_drop = ['B1R1', 'weight_final', 'filter_$']  # 'Pulau' column is not dropped here
     data = data.drop(columns=columns_to_drop, errors='ignore')
-    X = data.drop(columns=['Y'])
+    X = data.drop(columns=['Y', 'Pulau'])  # 'Pulau' column is excluded from prediction data
     y = data['Y']
-    return train_test_split(X, y, test_size=0.2, random_state=42), X, data
+    return train_test_split(X, y, test_size=0.2, random_state=42), X, data, meta.column_names_to_labels
 
-(X_train, X_test, y_train, y_test), X, data = load_and_preprocess_data()
+(X_train, X_test, y_train, y_test), X, data, column_names_to_labels = load_and_preprocess_data()
 
 # EDA
 st.title("Obesity Prediction App")
@@ -124,9 +124,12 @@ folium_static(m)
 
 # User input
 st.write("## Input Features")
-input_data = []
-for i in range(X.shape[1]):
-    input_data.append(st.number_input(f"Feature X{i+1}", min_value=0.0, max_value=100.0, step=0.1))
+input_data = {}
+cols = st.columns(2)  # Create two columns for better layout
+for i, col_name in enumerate(X.columns):
+    label = column_names_to_labels.get(col_name, col_name)
+    col = cols[i % 2]  # Alternate between columns
+    input_data[col_name] = col.number_input(label, min_value=0.0, max_value=100.0, step=0.1, key=f"input_{i}")
 
 # Prediction
 if st.button("Predict"):
