@@ -47,34 +47,33 @@ def load_and_preprocess_data():
 data_display = data.rename(columns=column_names_to_labels)
 
 # EDA
-st.title("Obesity Prediction App")
-st.write("## Exploratory Data Analysis")
+st.title("Aplikasi Prediksi Obesitas")
+st.write("""
+Aplikasi ini memprediksi kemungkinan obesitas berdasarkan fitur input pengguna.
+Ini menggunakan model XGBoost yang telah dilatih untuk membuat prediksi dan memberikan wawasan
+tentang faktor risiko utama yang berkontribusi terhadap obesitas. Aplikasi ini juga mencakup analisis data eksploratif (EDA)
+dan visualisasi untuk membantu memahami dataset dengan lebih baik.
 
-# Dataset Overview
-st.write("### Dataset Overview")
-st.write(data_display.head())
-
-# Dataset Description
-st.write("### Dataset Description")
-st.write(data_display.describe())
-
-# Visualizations
-st.write("## Data Visualizations")
+Fitur:
+- Memprediksi obesitas menggunakan model XGBoost yang telah dilatih
+- Menampilkan peta Indonesia dengan diagram lingkaran yang menunjukkan faktor risiko untuk setiap pulau
+- Memungkinkan input pengguna untuk prediksi dan menampilkan faktor risiko utama serta pengaruhnya
+""")
 
 # Histogram
-# st.write("### Histogram of Features")
+# st.write("### Histogram dari Fitur")
 # fig, ax = plt.subplots(figsize=(10, 6))
 # data.hist(ax=ax, bins=20)
 # st.pyplot(fig)
 
 # Box Plot
-# st.write("### Box Plot of Features")
+# st.write("### Box Plot dari Fitur")
 # fig, ax = plt.subplots(figsize=(10, 6))
 # sns.boxplot(data=data, ax=ax)
 # st.pyplot(fig)
 
 # # Correlation Heatmap
-# st.write("### Correlation Heatmap")
+# st.write("### Heatmap Korelasi")
 # fig, ax = plt.subplots(figsize=(10, 6))
 # sns.heatmap(data.corr(), annot=True, cmap='coolwarm', ax=ax)
 # st.pyplot(fig)
@@ -82,10 +81,10 @@ st.write("## Data Visualizations")
 # # Prediction using loaded XGBoost model
 # y_pred = xgb_model.predict(X_test)
 # accuracy = accuracy_score(y_test, y_pred)
-# st.write(f"### Model Accuracy (XGBoost): {accuracy:.2f}")
+# st.write(f"### Akurasi Model (XGBoost): {accuracy:.2f}")
 
 # Map of Indonesia
-st.write("## Map of Indonesia")
+st.write("## Faktor Obesitas Terbesar di Indonesia")
 
 # Create a map centered around Indonesia
 m = folium.Map(location=[-2.548926, 118.0148634], zoom_start=5)
@@ -126,7 +125,8 @@ for island, coords in islands.items():
 folium_static(m)
 
 # User input
-st.write("## Input Features")
+st.write("# Prediksi Obesitas")
+st.write("## Input Data")
 input_data = {}
 cols = st.columns(2)  # Create two columns for better layout
 for i, col_name in enumerate(X.columns):
@@ -135,7 +135,30 @@ for i, col_name in enumerate(X.columns):
     input_data[col_name] = col.number_input(label, min_value=0.0, max_value=100.0, step=0.1, key=f"input_{i}")
 
 # Prediction
-if st.button("Predict"):
+if st.button("Prediksi"):
     input_df = pd.DataFrame([input_data], columns=X.columns)
     prediction = xgb_model.predict(input_df)
-    st.write(f"### Prediction: {'Obese' if prediction[0] == 1 else 'Not Obese'}")
+    if prediction[0] == 1:
+        st.write("### Prediksi: Risiko Tinggi Obesitas")
+        
+        # Display pie chart of risk factors
+        risk_factors = input_df.mean().sort_values(ascending=False).head(5)
+        risk_factors_labels = [column_names_to_labels.get(factor, factor) for factor in risk_factors.index]
+        fig, ax = plt.subplots()
+        ax.pie(risk_factors, labels=risk_factors_labels, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')
+        st.pyplot(fig)
+        
+        # Display statistical report
+        st.write("#### Laporan Statistik Faktor Risiko Utama:")
+        for factor in risk_factors.index:
+            label = column_names_to_labels.get(factor, factor)
+            st.write(f"**{label}**: {input_df[factor].values[0]}%")
+        
+    else:
+        st.write("### Prediksi: Risiko Rendah Obesitas")
+        st.write("#### Alasan Tidak Obesitas:")
+        st.write("- Diet seimbang")
+        st.write("- Aktivitas fisik teratur")
+        st.write("- Pilihan gaya hidup sehat")
+        st.write("- Kesehatan metabolik yang baik")
