@@ -6,6 +6,11 @@ import pyreadstat
 from joblib import load
 import matplotlib.pyplot as plt
 import seaborn as sns
+import folium
+from streamlit_folium import folium_static
+import base64
+from io import BytesIO
+
 # Cache the model loading
 @st.cache(allow_output_mutation=True)
 def load_model():
@@ -30,7 +35,7 @@ def load_and_preprocess_data():
     data, meta = pyreadstat.read_sav('Dataset Final.sav')
     if data.isnull().sum().sum() > 0:
         data = data.dropna()
-    columns_to_drop = ['Pulau', 'B1R1', 'weight_final', 'filter_$']
+    columns_to_drop = ['B1R1', 'weight_final', 'filter_$']  # 'Pulau' column is not dropped
     data = data.drop(columns=columns_to_drop, errors='ignore')
     X = data.drop(columns=['Y'])
     y = data['Y']
@@ -54,27 +59,68 @@ st.write(data.describe())
 st.write("## Data Visualizations")
 
 # Histogram
-st.write("### Histogram of Features")
-fig, ax = plt.subplots(figsize=(10, 6))
-data.hist(ax=ax)
-st.pyplot(fig)
+# st.write("### Histogram of Features")
+# fig, ax = plt.subplots(figsize=(10, 6))
+# data.hist(ax=ax, bins=20)
+# st.pyplot(fig)
 
 # Box Plot
-st.write("### Box Plot of Features")
-fig, ax = plt.subplots(figsize=(10, 6))
-sns.boxplot(data=data, ax=ax)
-st.pyplot(fig)
+# st.write("### Box Plot of Features")
+# fig, ax = plt.subplots(figsize=(10, 6))
+# sns.boxplot(data=data, ax=ax)
+# st.pyplot(fig)
 
-# Correlation Heatmap
-st.write("### Correlation Heatmap")
-fig, ax = plt.subplots(figsize=(10, 6))
-sns.heatmap(data.corr(), annot=True, cmap='coolwarm', ax=ax)
-st.pyplot(fig)
+# # Correlation Heatmap
+# st.write("### Correlation Heatmap")
+# fig, ax = plt.subplots(figsize=(10, 6))
+# sns.heatmap(data.corr(), annot=True, cmap='coolwarm', ax=ax)
+# st.pyplot(fig)
 
-# Prediction using loaded XGBoost model
-y_pred = xgb_model.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred)
-st.write(f"### Model Accuracy (XGBoost): {accuracy:.2f}")
+# # Prediction using loaded XGBoost model
+# y_pred = xgb_model.predict(X_test)
+# accuracy = accuracy_score(y_test, y_pred)
+# st.write(f"### Model Accuracy (XGBoost): {accuracy:.2f}")
+
+# Map of Indonesia
+st.write("## Map of Indonesia")
+
+# Create a map centered around Indonesia
+m = folium.Map(location=[-2.548926, 118.0148634], zoom_start=5)
+
+# Add markers for each island with a popup for statistics
+islands = {
+    1 : [-0.789275, 100.619385],
+    2 : [-7.614529, 110.712246],
+    3 : [-1.681487, 113.382354],
+    4 : [-1.430421, 121.445617],
+    5 : [-4.269928, 138.080353]
+}
+
+def create_pie_chart(data, island):
+    risk_factors = data[data['Pulau'] == island].mean().sort_values(ascending=False).head(5)
+    fig, ax = plt.subplots()
+    ax.pie(risk_factors, labels=risk_factors.index, autopct='%1.1f%%', startangle=90)
+    ax.axis('equal')
+    buf = BytesIO()
+    plt.savefig(buf, format='png')
+    plt.close(fig)
+    buf.seek(0)
+    return base64.b64encode(buf.read()).decode('utf-8')
+
+for island, coords in islands.items():
+    pie_chart = create_pie_chart(data, island)
+    popup_html = f"""
+    <b>{island}</b><br>
+    <img src="data:image/png;base64,{pie_chart}" alt="Pie chart">
+    """
+    folium.Marker(
+        location=coords,
+        popup=popup_html,
+        tooltip=island
+    ).add_to(m)
+
+# Display the map
+folium_static(m)
 
 # User input
 st.write("## Input Features")
