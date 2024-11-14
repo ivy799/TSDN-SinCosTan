@@ -38,7 +38,7 @@ We welcome contributions to enhance the TSDN SinCosTan web application. If you h
 This project is licensed under the MIT License. For more details, see the [LICENSE](LICENSE) file.
 
 ## Contact
-For any questions or inquiries, please reach out to us at [your-email@example.com].
+For any questions or inquiries, please reach out to us at [yusraerlangg@gmail.com].
 
 ## Acknowledgements
 We extend our gratitude to the open-source community for their invaluable contributions and resources that made this project possible.
