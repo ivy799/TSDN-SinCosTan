@@ -43,17 +43,20 @@ def load_and_preprocess_data():
 
 (X_train, X_test, y_train, y_test), X, data, column_names_to_labels = load_and_preprocess_data()
 
+# Rename columns in data for display purposes
+data_display = data.rename(columns=column_names_to_labels)
+
 # EDA
 st.title("Obesity Prediction App")
 st.write("## Exploratory Data Analysis")
 
 # Dataset Overview
 st.write("### Dataset Overview")
-st.write(data.head())
+st.write(data_display.head())
 
 # Dataset Description
 st.write("### Dataset Description")
-st.write(data.describe())
+st.write(data_display.describe())
 
 # Visualizations
 st.write("## Data Visualizations")
