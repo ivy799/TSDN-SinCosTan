@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 import folium
 import base64
 from io import BytesIO
+# Use a non-GUI backend for Matplotlib
+import matplotlib
+matplotlib.use('Agg')
 
 app = Flask(__name__)
 
@@ -67,8 +70,8 @@ def home():
         ).add_to(m)
 
     return render_template('index.html',
-                         table_head=data_display.head().to_html(),
-                         table_describe=data_display.describe().to_html(),
+                         table_head=data_display.head().to_html(classes='table-auto w-full text-left border-collapse'),
+                         table_describe=data_display.describe().to_html(classes='table-auto w-full text-left border-collapse'),
                          map=m._repr_html_(),
                          features=X.columns,
                          labels=column_names_to_labels)
