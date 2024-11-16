@@ -84,10 +84,10 @@ Fitur:
 # st.write(f"### Akurasi Model (XGBoost): {accuracy:.2f}")
 
 # Map of Indonesia
-st.write("## Faktor Obesitas Terbesar di Indonesia")
+st.write("## Faktor Risiko Obesitas di Setiap Pulau di Indonesia")
 
 # Create a map centered around Indonesia
-m = folium.Map(location=[-2.548926, 118.0148634], zoom_start=5)
+m = folium.Map(location=[-2.548926, 118.0148634], zoom_start=4)
 
 # Add markers for each island with a popup for statistics
 islands = {
@@ -95,7 +95,9 @@ islands = {
     2 : [-7.614529, 110.712246],
     3 : [-1.681487, 113.382354],
     4 : [-1.430421, 121.445617],
-    5 : [-4.269928, 138.080353]
+    5 : [-4.269928, 138.080353],
+    6: [-8.409518, 115.188919],
+    7: [-3.23846, 130.14527]
 }
 
 def create_pie_chart(data, island):
