@@ -231,7 +231,7 @@ elif page == "EDA":
                 bargap=0.1
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key="categorical_plot")
             
         except Exception as e:
             st.error(f"Error creating categorical plot: {e}")
@@ -258,7 +258,7 @@ elif page == "EDA":
             bargap=0.1
         )
     
-    st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="histogram_plot")
 
     # Update statistics to show counts for categorical variables
     st.markdown("""
@@ -351,7 +351,7 @@ elif page == "Prediksi":
                     height=400,
                     margin=dict(l=0, r=0, t=40, b=0),
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, key="risk_factors_plot")
 
                 # Display statistical report
                 st.write("#### Laporan Statistik Faktor Risiko Utama:")
@@ -545,7 +545,7 @@ elif page == "Peta Risiko":
                 font=dict(family="Helvetica Neue, Arial", size=12),
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key="island_risk_factors")
 
             # Add pie chart for risk distribution
             risk_dist = pd.DataFrame(
@@ -579,5 +579,5 @@ elif page == "Peta Risiko":
                 ),
             )
 
-            st.plotly_chart(fig_pie, use_container_width=True)
+            st.plotly_chart(fig_pie, use_container_width=True, key="island_risk_distribution")
 
