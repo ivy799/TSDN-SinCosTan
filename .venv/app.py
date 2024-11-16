@@ -15,7 +15,7 @@ app = Flask(__name__)
 
 # Load model
 def load_model():
-    return load('xgb_model.joblib')
+    return load('xgboost_optimized_model.pkl')
 
 xgb_model = load_model()
 

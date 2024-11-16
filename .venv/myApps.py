@@ -14,7 +14,7 @@ from io import BytesIO
 # Cache the model loading
 @st.cache_resource
 def load_model():
-    return load('xgb_model.joblib')
+    return load('xgboost_optimized_model.pkl')
 
 # # Contoh HTML
 # html_content = """
