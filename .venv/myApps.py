@@ -7,56 +7,145 @@ from joblib import load
 import matplotlib.pyplot as plt
 import seaborn as sns
 import folium
-from streamlit_folium import folium_static
+from streamlit_folium import st_folium
 import base64
 from io import BytesIO
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# Add custom CSS
+COLOR_PALETTE = {
+    'primary': '#6C63FF',      
+    'secondary': '#2EC4B6',    
+    'accent': '#FF6B6B',       
+    'background': '#1A1A2E',   
+    'text': '#000000',         
+    'gradient': ['#6C63FF', '#2EC4B6']  
+}
+
+
+pages = ["Home", "Analisis Data", "Prediksi", "Peta Risiko"]
+page = "Home"  
+
 st.markdown(
-    """
+    f"""
 <style>
-    .main {
-        background-color: #f8f9fa;
+    .main {{
+        background-color: {COLOR_PALETTE['background']};
         font-family: 'Helvetica Neue', sans-serif;
-    }
-    .stButton>button {
-        background-color: #007bff;
-        color: white;
-        border-radius: 5px;
+        color: {COLOR_PALETTE['text']};
+    }}
+    .stButton>button {{
+        background-color: {COLOR_PALETTE['primary']};
+        color: {COLOR_PALETTE['text']};
+        border-radius: 8px;
         padding: 0.5rem 2rem;
         border: none;
         transition: all 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #0056b3;
+    }}
+    .stButton>button:hover {{
+        background-color: {COLOR_PALETTE['secondary']};
         transform: translateY(-2px);
-    }
-    .chart-container {
-        background: white;
-        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(108, 99, 255, 0.2);
+    }}
+    .chart-container {{
+        background: {COLOR_PALETTE['gradient']};
+        border-radius: 12px;
         padding: 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         margin: 20px 0;
-    }
-    .metric-container {
-        background: linear-gradient(135deg, #6B8DD6 0%, #8E37D7 100%);
-        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }}
+    .metric-container {{
+        background: linear-gradient(135deg, {COLOR_PALETTE['gradient'][0]} 0%, {COLOR_PALETTE['gradient'][1]} 100%);
+        color: #FFFFFF;
         padding: 20px;
-        border-radius: 10px;
+        border-radius: 12px;
         margin: 10px 0;
-    }
+        box-shadow: 0 4px 15px rgba(108, 99, 255, 0.2);
+    }}
 </style>
 """,
     unsafe_allow_html=True,
 )
 
-# Move label_mappings definition to the top level before any page logic
+st.markdown(
+    f"""
+    <style>
+        /* Base styling */
+        .main {{
+            background-color: {COLOR_PALETTE['background']};
+            font-family: 'Helvetica Neue', sans-serif;
+            color: {COLOR_PALETTE['text']};
+            padding: 1rem 2rem;
+        }}
+        
+        /* Navigation styling */
+        .nav-container {{
+            background: {COLOR_PALETTE['gradient']};
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }}
+        
+        .nav-title {{
+            color: {COLOR_PALETTE['text']};
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid {COLOR_PALETTE['primary']};
+        }}
+        
+        .section-container {{
+            padding: 2rem;
+            margin: 1.5rem 0;
+        }}
+        
+        .content-padding {{
+            padding: 0 1rem;
+        }}
+        
+        .stButton>button {{
+            background: linear-gradient(135deg, {COLOR_PALETTE['primary']} 0%, {COLOR_PALETTE['secondary']} 100%);
+            color: {COLOR_PALETTE['text']};
+            padding: 0.8rem 2rem;
+            border-radius: 8px;
+            border: none;
+            transition: all 0.3s;
+            margin: 1rem 0;
+            width: 100%;
+        }}
+        
+        .chart-container {{
+            background: {COLOR_PALETTE['gradient']};
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }}
+        
+        .metric-container {{
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }}
+
+        .sidebar .sidebar-content {{
+            background: {COLOR_PALETTE['background']};
+            padding: 2rem 1rem;
+        }}
+        
+        .nav-section {{
+            margin-bottom: 2rem;
+        }}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 label_mappings = {
-    'X1': {1.0: 'Perkotaan', 2.0: 'Pedesaan'},
-    'X2': {1.0: 'Laki-laki', 2.0: 'Perempuan'},
+    'X1': {0.0: 'Perkotaan', 1.0: 'Pedesaan'},
+    'X2': {0.0: 'Laki-laki', 1.0: 'Perempuan'},
     'X3': {1.0: 'Belum Kawin', 2.0: 'Kawin', 3.0: 'Cerai hidup', 4.0: 'Cerai mati'},
     'X4': {1.0: '15 - 24 tahun', 2.0: '25 - 34 tahun', 3.0: '35 - 44 tahun', 4.0: '45 - 54 tahun', 
            5.0: '55 - 64 tahun', 6.0: '65 - 74 tahun', 7.0: '> 74 tahun'},
@@ -65,7 +154,7 @@ label_mappings = {
     'X6': {1.0: 'Tidak bekerja', 2.0: 'Sekolah', 3.0: 'PNS/ TNI/ Polri/ BUMN/ BUMD', 
            4.0: 'Pegawai swasta', 5.0: 'Wiraswasta', 6.0: 'Petani', 7.0: 'Nelayan', 
            8.0: 'Buruh/ sopir/ pembantu ruta', 9.0: 'Lainnya'},
-    'X7': {1.0: 'Ya, rutin', 2.0: 'Ya, kadang-kadang', 3.0: 'Tidak'},
+    'X7': {0.0: 'Ya, rutin', 1.0: 'Ya, kadang-kadang', 2.0: 'Tidak'},
     'X8': {1.0: '>1 kali per hari', 2.0: '1 kali per hari', 3.0: '3-6 kali per minggu', 
            4.0: '1-2 kali per minggu', 5.0: '< 3 kali per bulan', 6.0: 'Tidak pernah'},
     'X9': {1.0: '>1 kali per hari', 2.0: '1 kali per hari', 3.0: '3-6 kali per minggu', 
@@ -82,16 +171,15 @@ label_mappings = {
             4.0: '1-2 kali per minggu', 5.0: '< 3 kali per bulan', 6.0: 'Tidak pernah'},
     'X15': {1.0: '>1 kali per hari', 2.0: '1 kali per hari', 3.0: '3-6 kali per minggu', 
             4.0: '1-2 kali per minggu', 5.0: '< 3 kali per bulan', 6.0: 'Tidak pernah'},
-    'X16': {1.0: '>1 kali per hari', 2.0: '1 kali per hari', 3.0: '3-6 kali per minggu', 
+    'X16': {0.0: '>1 kali per hari', 1.0: '1 kali per hari', 2.0: '3-6 kali per minggu', 
             4.0: '1-2 kali per minggu', 5.0: '< 3 kali per bulan', 6.0: 'Tidak pernah'},
-    'X17': {1.0: 'Tidak', 2.0: 'Berhenti Merokok', 3.0: 'Ya'},
-    'X18': {1.0: 'Cukup Aktif', 2.0: 'Kurang Aktif'},
+    'X17': {0.0: 'Tidak', 1.0: 'Berhenti Merokok', 2.0: 'Ya'},
+    'X18': {0.0: 'Cukup Aktif', 1.0: 'Kurang Aktif'},
     'X19': {1.0: 'Ya', 2.0: 'Tidak'},
-    'X20': {1.0: 'Normal', 2.0: 'Prehypertension', 3.0: 'Hypertension stage 1', 
-            4.0: 'Hypertension stage 2'},
+    'X20': {0.0: 'Normal', 1.0: 'Prehypertension', 2.0: 'Hypertension stage 1', 
+            3.0: 'Hypertension stage 2'},
 }
 
-# Cache the model loading
 @st.cache_resource
 def load_model():
     try:
@@ -103,8 +191,6 @@ def load_model():
 
 xgb_model = load_model()
 
-
-# Cache the dataset loading and preprocessing
 @st.cache_data
 def load_and_preprocess_data():
     try:
@@ -115,11 +201,11 @@ def load_and_preprocess_data():
             "B1R1",
             "weight_final",
             "filter_$",
-        ]  # 'Pulau' column is not dropped here
+        ]  
         data = data.drop(columns=columns_to_drop, errors="ignore")
         X = data.drop(
             columns=["Y", "Pulau"]
-        )  # 'Pulau' column is excluded from prediction data
+        ) 
         y = data["Y"]
         return (
             train_test_split(X, y, test_size=0.2, random_state=42),
@@ -137,81 +223,98 @@ def load_and_preprocess_data():
 )
 
 if X_train is None or xgb_model is None:
+    st.error("Error: Data atau model tidak dapat dimuat.")
     st.stop()
 
-# Rename columns in data for display purposes
+if 'data' not in locals() or data is None:
+    st.error("Error: Dataset tidak dapat dimuat.")
+    st.stop()
+
 data_display = data.rename(columns=column_names_to_labels)
 
-# EDA
-st.title("Aplikasi Prediksi Obesitas")
-st.markdown(
-    """
-    <style>
-    .main { background-color: #f0f2f6; }
-    .stButton>button { background-color: #4CAF50; color: white; }
-    </style>
+st.sidebar.markdown(
+    f"""
+    <div class="nav-container">
+        <div class="nav-title">Navigasi</div>
+    </div>
     """,
-    unsafe_allow_html=True,
-)
-st.write(
-    """
-    Aplikasi ini memprediksi kemungkinan obesitas berdasarkan fitur input pengguna.
-    Ini menggunakan model XGBoost yang telah dilatih untuk membuat prediksi dan memberikan wawasan
-    tentang faktor risiko utama yang berkontribusi terhadap obesitas. Aplikasi ini juga mencakup analisis data eksploratif (EDA)
-    dan visualisasi untuk membantu memahami dataset dengan lebih baik.
-    """
+    unsafe_allow_html=True
 )
 
-# Sidebar for navigation
-st.sidebar.title("Navigasi")
-pages = ["Home", "EDA", "Prediksi", "Peta Risiko"]
-page = st.sidebar.radio("Pilih Halaman", pages)
+page = st.sidebar.radio(
+    "Navigasi",  
+    pages,
+    label_visibility="collapsed"  
+)
+
+st.sidebar.markdown(
+    f"""
+    <div class="nav-container" style="margin-top: 2rem;">
+        <div class="nav-title">Tentang Aplikasi</div>
+        <p style="color: {COLOR_PALETTE['text']}; font-size: 0.9em; margin-top: 1rem;">
+            Versi 1.0.0<br>
+            Dikembangkan dengan Streamlit
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown('<div class="content-padding">', unsafe_allow_html=True)
 
 if page == "Home":
-    st.header("Selamat Datang di Aplikasi Prediksi Obesitas")
+    st.markdown(
+    f"""
+    <div class="metric-container">
+        <h1 style="text-color: #FFFFFFF; text-align: center; font-size: 2.2em; margin-bottom: 10px;">Aplikasi Prediksi Obesitas</h1>
+        <p style="text-align: center; font-size: 1.2em;">Analisis & Prediksi Risiko Obesitas menggunakan Machine Learning</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+    )
+
     st.write(
         """
-        Fitur:
-        - Memprediksi obesitas menggunakan model XGBoost yang telah dilatih
-        - Menampilkan peta Indonesia dengan diagram lingkaran yang menunjukkan faktor risiko untuk setiap pulau
-        - Memungkinkan input pengguna untuk prediksi dan menampilkan faktor risiko utama serta pengaruhnya
+    Aplikasi ini dirancang untuk memprediksi kemungkinan obesitas berdasarkan fitur input pengguna. Dengan memanfaatkan model XGBoost yang telah dilatih, aplikasi ini mampu memberikan prediksi serta mengidentifikasi faktor risiko utama yang berkontribusi terhadap obesitas. Selain itu, aplikasi ini juga menyediakan analisis data eksploratif (EDA) dan visualisasi untuk membantu pengguna memahami dataset secara lebih mendalam.
         """
     )
 
-elif page == "EDA":
+    st.header("Fitur Aplikasi:")
+    st.write(
+        """
+        - Visualisasi distribusi tiap fitur dalam dataset.
+        - Prediksi risiko obesitas berdasarkan input pengguna.
+        - Visualisasi faktor risiko berdasarkan pulau di Indonesia
+        """
+    )
+
+elif page == "Analisis Data":
     st.header("Analisis Data Eksploratif (EDA)")
     
-    # Create a dictionary mapping labels to column names
     label_to_column = {column_names_to_labels.get(col, col): col for col in X.columns}
     
-    # Use labels in the selectbox
     selected_label = st.selectbox("Pilih Fitur untuk Analisis:", list(label_to_column.keys()))
     selected_feature = label_to_column[selected_label]
     
-    # Create a copy of the data with mapped categorical values
     plot_data = data.copy()
     if selected_feature in label_mappings:
         try:
-            # Create frequency distribution with proper error handling
             value_counts = plot_data[selected_feature].value_counts().sort_index()
             
-            # Safely map categories with fallback for unexpected values
             categories = []
             for val in value_counts.index:
                 try:
-                    # Convert float values to the correct format if needed
                     lookup_val = float(val) if isinstance(val, (int, float)) else val
                     category = label_mappings[selected_feature].get(lookup_val, f"Value {val}")
                     categories.append(category)
                 except (ValueError, TypeError):
                     categories.append(f"Value {val}")
             
-            # Create bar chart
             fig = go.Figure()
             fig.add_trace(go.Bar(
                 x=categories,
                 y=value_counts.values,
-                marker_color='#007bff'
+                marker_color=COLOR_PALETTE['primary']
             ))
             
             fig.update_layout(
@@ -238,13 +341,12 @@ elif page == "EDA":
             st.write("Detailed error information:", str(e))
             
     else:
-        # Use histogram for numeric data
         fig = px.histogram(
             plot_data,
             x=selected_feature,
             title=f"Analisis {selected_label}",
             template="plotly_white",
-            color_discrete_sequence=["#007bff"],
+            color_discrete_sequence=[COLOR_PALETTE['primary']],
             marginal="box"
         )
         fig.update_layout(
@@ -260,20 +362,13 @@ elif page == "EDA":
     
         st.plotly_chart(fig, use_container_width=True, key="histogram_plot")
 
-    # Update statistics to show counts for categorical variables
-    st.markdown("""
-        <div class='chart-container'>
-            <h4>Statistik Deskriptif</h4>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("Statistik Deskriptif")
     
     col1, col2 = st.columns(2)
     if selected_feature in label_mappings:
-        # Show value counts for categorical variables
         value_counts = plot_data[selected_feature].value_counts()
-        most_common = value_counts.index[0]
-        least_common = value_counts.index[-1]
-        
+        most_common = label_mappings[selected_feature].get(value_counts.index[0], value_counts.index[0])
+        least_common = label_mappings[selected_feature].get(value_counts.index[-1], value_counts.index[-1])
         with col1:
             st.metric("Kategori Terbanyak", f"{most_common}")
             st.metric("Total Kategori", f"{len(value_counts)}")
@@ -281,7 +376,6 @@ elif page == "EDA":
             st.metric("Kategori Tersedikit", f"{least_common}")
             st.metric("Total Data", f"{len(plot_data[selected_feature]):,}")
     else:
-        # Show numeric statistics for non-categorical variables
         with col1:
             st.metric("Rata-rata", f"{data[selected_feature].mean():.2f}")
             st.metric("Median", f"{data[selected_feature].median()::.2f}")
@@ -290,33 +384,93 @@ elif page == "EDA":
             st.metric("Total Data", f"{len(data[selected_feature]):,}")
 
 elif page == "Prediksi":
-    st.header("Prediksi Obesitas")
-    st.write("## Input Data")
+    st.header("Prediksi Risiko Obesitas")
+    st.write("##### Masukkan data yang sesuai untuk mendapatkan prediksi risiko obesitas berdasarkan faktor sosio-demografis dan pola hidup Anda.")
     input_data = {}
-    cols = st.columns(2)  # Create two columns for better layout
     
-    for i, col_name in enumerate(X.columns):
-        col = cols[i % 2]
-        label = column_names_to_labels.get(col_name, col_name)
-        options = list(label_mappings[col_name].values())
-        selected_label = col.selectbox(
-            label,
-            options=options,
-            key=f"input_{i}"
-        )
-        # Convert selected label back to numeric value
-        numeric_value = [k for k, v in label_mappings[col_name].items() if v == selected_label][0]
-        input_data[col_name] = numeric_value
+    st.write("### Sosio-Demografis")
+    demo_col1, demo_col2 = st.columns(2)
+    demographic_vars = ['X1', 'X2', 'X3', 'X4', 'X5', 'X6']
+    
+    for i, col_name in enumerate(demographic_vars):
+        col = demo_col1 if i % 2 == 0 else demo_col2
+        with col:
+            label = column_names_to_labels.get(col_name, col_name)
+            options = list(label_mappings[col_name].values())
+            selected_label = st.selectbox(
+                label,
+                options=options,
+                key=f"demo_{i}",
+                help=f"Pilih {label.lower()} Anda"
+            )
+            numeric_value = [k for k, v in label_mappings[col_name].items() if v == selected_label][0]
+            input_data[col_name] = numeric_value
 
-    # Prediction
-    if st.button("Prediksi"):
+    st.write("### Pola Hidup")
+    life_col1, life_col2 = st.columns(2)
+    lifestyle_vars = ['X7', 'X17', 'X18', 'X19']
+    
+    for i, col_name in enumerate(lifestyle_vars):
+        col = life_col1 if i % 2 == 0 else life_col2
+        with col:
+            label = column_names_to_labels.get(col_name, col_name)
+            options = list(label_mappings[col_name].values())
+            selected_label = st.selectbox(
+                label,
+                options=options,
+                key=f"life_{i}",
+                help=f"Pilih {label.lower()} Anda"
+            )
+            numeric_value = [k for k, v in label_mappings[col_name].items() if v == selected_label][0]
+            input_data[col_name] = numeric_value
+
+    st.write("### Pola Makan")
+    diet_cols = st.columns(3)
+    dietary_vars = ['X8', 'X9', 'X10', 'X11', 'X12', 'X13', 'X14', 'X15', 'X16']
+    
+    for i, col_name in enumerate(dietary_vars):
+        with diet_cols[i % 3]:
+            label = column_names_to_labels.get(col_name, col_name)
+            options = list(label_mappings[col_name].values())
+            selected_label = st.selectbox(
+                label,
+                options=options,
+                key=f"diet_{i}",
+                help=f"Pilih frekuensi konsumsi {label.lower()}"
+            )
+            numeric_value = [k for k, v in label_mappings[col_name].items() if v == selected_label][0]
+            input_data[col_name] = numeric_value
+
+    st.write("### Status Kesehatan")
+    col_name = 'X20'
+    label = column_names_to_labels.get(col_name, col_name)
+    options = list(label_mappings[col_name].values())
+
+    selected_label = st.selectbox(
+        label,
+        options=options,
+        key="health_0",
+        help=f"Pilih {label.lower()} Anda"
+    )
+    numeric_value = [k for k, v in label_mappings[col_name].items() if v == selected_label][0]
+    input_data[col_name] = numeric_value
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    predict_button = st.button(
+        "Prediksi Sekarang",
+        help="Klik untuk melihat hasil prediksi",
+        key="predict_button"
+    )
+
+    if predict_button:
         try:
             input_df = pd.DataFrame([input_data], columns=X.columns)
             prediction = xgb_model.predict(input_df)
 
             if prediction[0] == 1:
                 st.markdown(
-                    """
+                    f"""
                     <div class='metric-container'>
                         <h2 style='text-align: center;'>Prediksi: Risiko Tinggi Obesitas</h2>
                     </div>
@@ -324,7 +478,6 @@ elif page == "Prediksi":
                     unsafe_allow_html=True,
                 )
 
-                # Interactive risk factors chart
                 risk_factors = input_df.mean().sort_values(ascending=False).head(5)
                 fig = go.Figure(
                     go.Bar(
@@ -353,7 +506,6 @@ elif page == "Prediksi":
                 )
                 st.plotly_chart(fig, use_container_width=True, key="risk_factors_plot")
 
-                # Display statistical report
                 st.write("#### Laporan Statistik Faktor Risiko Utama:")
                 for factor in risk_factors.index:
                     label = column_names_to_labels.get(factor, factor)
@@ -370,9 +522,8 @@ elif page == "Prediksi":
             st.error(f"Error during prediction: {e}")
 
 elif page == "Peta Risiko":
-    st.header("Faktor Risiko Obesitas di Setiap Pulau di Indonesia")
+    st.title("Faktor Risiko Obesitas di Setiap Pulau di Indonesia")
 
-    # Define islands data
     islands = {
         "Sumatera": [-0.789275, 100.619385],
         "Jawa": [-7.614529, 110.712246],
@@ -383,6 +534,7 @@ elif page == "Peta Risiko":
         "Maluku": [-3.23846, 130.14527],
     }
 
+    from streamlit_folium import folium_static
     island_name_to_int = {
         "Sumatera": 1,
         "Jawa": 2,
@@ -393,12 +545,10 @@ elif page == "Peta Risiko":
         "Maluku": 7,
     }
 
-    # Create full-width map
     m = folium.Map(
         location=[-2.548926, 118.0148634], zoom_start=4, tiles="cartodb positron"
     )
 
-    # Add markers for each island with risk statistics
     for island, coords in islands.items():
         island_int = island_name_to_int[island]
         island_data = data[data["Pulau"] == island_int]
@@ -423,16 +573,13 @@ elif page == "Peta Risiko":
 
     folium.LayerControl().add_to(m)
 
-    # Display the map
     try:
         folium_static(m)
     except Exception as e:
         st.error(f"Error displaying map: {e}")
 
-    # Add detail section below map with enhanced visualization
     st.write("## Detail Faktor Risiko per Pulau")
 
-    # Create three columns for better layout
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
@@ -452,14 +599,12 @@ elif page == "Peta Risiko":
             unsafe_allow_html=True,
         )
 
-        # Create two columns for statistics and chart
         stat_col, chart_col = st.columns([1, 2])
 
         with stat_col:
             island_int = island_name_to_int[selected_island]
             island_data = data[data["Pulau"] == island_int]
 
-            # Create metrics with custom styling
             metrics_container = st.container()
             with metrics_container:
                 st.markdown(
@@ -510,7 +655,6 @@ elif page == "Peta Risiko":
                 .head(5)
             )
 
-            # Create interactive bar chart with Plotly
             fig = go.Figure()
             fig.add_trace(
                 go.Bar(
@@ -538,7 +682,7 @@ elif page == "Peta Risiko":
                 template="plotly_white",
                 height=400,
                 margin=dict(l=0, r=0, t=40, b=0),
-                xaxis_title="Tingkat Kepentingan",
+                xaxis_title="Skor Pentingnya Faktor",
                 yaxis_title="Faktor",
                 plot_bgcolor="rgba(0,0,0,0)",
                 hoverlabel=dict(bgcolor="white"),
@@ -547,10 +691,9 @@ elif page == "Peta Risiko":
 
             st.plotly_chart(fig, use_container_width=True, key="island_risk_factors")
 
-            # Add pie chart for risk distribution
             risk_dist = pd.DataFrame(
                 {
-                    "Status": ["Berisiko", "Tidak Berisiko"],
+                    "Status": ["Obesitas", "Tidak Obesitas"],
                     "Persentase": [
                         (island_data["Y"] == 1).mean() * 100,
                         (island_data["Y"] == 0).mean() * 100,
@@ -570,7 +713,7 @@ elif page == "Peta Risiko":
             )
 
             fig_pie.update_layout(
-                title="Distribusi Risiko Obesitas",
+                title="Distribusi Status Obesitas",
                 template="plotly_white",
                 height=300,
                 showlegend=True,
@@ -580,4 +723,3 @@ elif page == "Peta Risiko":
             )
 
             st.plotly_chart(fig_pie, use_container_width=True, key="island_risk_distribution")
-
