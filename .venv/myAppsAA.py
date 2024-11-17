@@ -7,56 +7,202 @@ from joblib import load
 import matplotlib.pyplot as plt
 import seaborn as sns
 import folium
-from streamlit_folium import folium_static
+from streamlit_folium import st_folium
 import base64
 from io import BytesIO
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# Add custom CSS
+# Define color palette at the top
+COLOR_PALETTE = {
+    'primary': '#6C63FF',      # Modern indigo
+    'secondary': '#2EC4B6',    # Turquoise
+    'accent': '#FF6B6B',       # Coral
+    'background': '#1A1A2E',   # Dark blue-black
+    'surface': '#16213E',      # Darker blue
+    'text': '#E2E2E2',         # Light gray
+    'gradient': ['#6C63FF', '#2EC4B6']  # Gradient from primary to secondary
+}
+
+# Define pages before the sidebar code
+pages = ["Home", "Analisis Data", "Prediksi", "Peta Risiko"]
+page = "Home"  # Default page
+
+# Original CSS without the enhanced styling changes
 st.markdown(
-    """
+    f"""
 <style>
-    .main {
-        background-color: #f8f9fa;
+    .main {{
+        background-color: {COLOR_PALETTE['background']};
         font-family: 'Helvetica Neue', sans-serif;
-    }
-    .stButton>button {
-        background-color: #007bff;
-        color: white;
-        border-radius: 5px;
+        color: {COLOR_PALETTE['text']};
+    }}
+    .stButton>button {{
+        background-color: {COLOR_PALETTE['primary']};
+        color: {COLOR_PALETTE['text']};
+        border-radius: 8px;
         padding: 0.5rem 2rem;
         border: none;
         transition: all 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #0056b3;
+    }}
+    .stButton>button:hover {{
+        background-color: {COLOR_PALETTE['secondary']};
         transform: translateY(-2px);
-    }
-    .chart-container {
-        background: white;
-        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(108, 99, 255, 0.2);
+    }}
+    .chart-container {{
+        background: {COLOR_PALETTE['surface']};
+        border-radius: 12px;
         padding: 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         margin: 20px 0;
-    }
-    .metric-container {
-        background: linear-gradient(135deg, #6B8DD6 0%, #8E37D7 100%);
-        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }}
+    .metric-container {{
+        background: linear-gradient(135deg, {COLOR_PALETTE['gradient'][0]} 0%, {COLOR_PALETTE['gradient'][1]} 100%);
+        color: {COLOR_PALETTE['text']};
         padding: 20px;
-        border-radius: 10px;
+        border-radius: 12px;
         margin: 10px 0;
-    }
+        box-shadow: 0 4px 15px rgba(108, 99, 255, 0.2);
+    }}
 </style>
 """,
     unsafe_allow_html=True,
 )
 
+# Update CSS with improved navigation and spacing
+st.markdown(
+    f"""
+    <style>
+        /* Base styling */
+        .main {{
+            background-color: {COLOR_PALETTE['background']};
+            font-family: 'Helvetica Neue', sans-serif;
+            color: {COLOR_PALETTE['text']};
+            padding: 1rem 2rem;
+        }}
+        
+        /* Navigation styling */
+        .nav-container {{
+            background: {COLOR_PALETTE['surface']};
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }}
+        
+        .nav-title {{
+            color: {COLOR_PALETTE['text']};
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid {COLOR_PALETTE['primary']};
+        }}
+        
+        /* Section spacing */
+        .section-container {{
+            padding: 2rem;
+            margin: 1.5rem 0;
+        }}
+        
+        /* Content padding */
+        .content-padding {{
+            padding: 0 1rem;
+        }}
+        
+        /* Existing styles with improved spacing */
+        .stButton>button {{
+            background: linear-gradient(135deg, {COLOR_PALETTE['primary']} 0%, {COLOR_PALETTE['secondary']} 100%);
+            color: {COLOR_PALETTE['text']};
+            padding: 0.8rem 2rem;
+            border-radius: 8px;
+            border: none;
+            transition: all 0.3s;
+            margin: 1rem 0;
+            width: 100%;
+        }}
+        
+        .chart-container {{
+            background: {COLOR_PALETTE['surface']};
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }}
+        
+        .metric-container {{
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }}
+
+        /* Sidebar improvements */
+        .sidebar .sidebar-content {{
+            background: {COLOR_PALETTE['surface']};
+            padding: 2rem 1rem;
+        }}
+        
+        /* Radio button styling */
+        .stRadio > label {{
+            background: {COLOR_PALETTE['surface']};
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            transition: all 0.3s;
+        }}
+        
+        .stRadio > label:hover {{
+            background: {COLOR_PALETTE['primary']};
+            cursor: pointer;
+        }}
+
+        /* Enhanced Navigation Styling */
+        .nav-link {{
+            background: {COLOR_PALETTE['surface']};
+            color: {COLOR_PALETTE['text']};
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            display: block;
+            text-decoration: none;
+        }}
+        
+        .nav-link:hover {{
+            background: linear-gradient(135deg, {COLOR_PALETTE['primary']} 0%, {COLOR_PALETTE['secondary']} 100%);
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }}
+        
+        .nav-link.active {{
+            background: linear-gradient(135deg, {COLOR_PALETTE['primary']} 0%, {COLOR_PALETTE['secondary']} 100%);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }}
+        
+        .nav-icon {{
+            margin-right: 10px;
+        }}
+        
+        .sidebar .sidebar-content {{
+            background: {COLOR_PALETTE['background']};
+            padding: 2rem 1rem;
+        }}
+        
+        .nav-section {{
+            margin-bottom: 2rem;
+        }}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # Move label_mappings definition to the top level before any page logic
 label_mappings = {
-    'X1': {1.0: 'Perkotaan', 2.0: 'Pedesaan'},
-    'X2': {1.0: 'Laki-laki', 2.0: 'Perempuan'},
+    'X1': {0.0: 'Perkotaan', 1.0: 'Pedesaan'},
+    'X2': {0.0: 'Laki-laki', 1.0: 'Perempuan'},
     'X3': {1.0: 'Belum Kawin', 2.0: 'Kawin', 3.0: 'Cerai hidup', 4.0: 'Cerai mati'},
     'X4': {1.0: '15 - 24 tahun', 2.0: '25 - 34 tahun', 3.0: '35 - 44 tahun', 4.0: '45 - 54 tahun', 
            5.0: '55 - 64 tahun', 6.0: '65 - 74 tahun', 7.0: '> 74 tahun'},
@@ -65,7 +211,7 @@ label_mappings = {
     'X6': {1.0: 'Tidak bekerja', 2.0: 'Sekolah', 3.0: 'PNS/ TNI/ Polri/ BUMN/ BUMD', 
            4.0: 'Pegawai swasta', 5.0: 'Wiraswasta', 6.0: 'Petani', 7.0: 'Nelayan', 
            8.0: 'Buruh/ sopir/ pembantu ruta', 9.0: 'Lainnya'},
-    'X7': {1.0: 'Ya, rutin', 2.0: 'Ya, kadang-kadang', 3.0: 'Tidak'},
+    'X7': {0.0: 'Ya, rutin', 1.0: 'Ya, kadang-kadang', 2.0: 'Tidak'},
     'X8': {1.0: '>1 kali per hari', 2.0: '1 kali per hari', 3.0: '3-6 kali per minggu', 
            4.0: '1-2 kali per minggu', 5.0: '< 3 kali per bulan', 6.0: 'Tidak pernah'},
     'X9': {1.0: '>1 kali per hari', 2.0: '1 kali per hari', 3.0: '3-6 kali per minggu', 
@@ -82,13 +228,13 @@ label_mappings = {
             4.0: '1-2 kali per minggu', 5.0: '< 3 kali per bulan', 6.0: 'Tidak pernah'},
     'X15': {1.0: '>1 kali per hari', 2.0: '1 kali per hari', 3.0: '3-6 kali per minggu', 
             4.0: '1-2 kali per minggu', 5.0: '< 3 kali per bulan', 6.0: 'Tidak pernah'},
-    'X16': {1.0: '>1 kali per hari', 2.0: '1 kali per hari', 3.0: '3-6 kali per minggu', 
+    'X16': {0.0: '>1 kali per hari', 1.0: '1 kali per hari', 2.0: '3-6 kali per minggu', 
             4.0: '1-2 kali per minggu', 5.0: '< 3 kali per bulan', 6.0: 'Tidak pernah'},
-    'X17': {1.0: 'Tidak', 2.0: 'Berhenti Merokok', 3.0: 'Ya'},
-    'X18': {1.0: 'Cukup Aktif', 2.0: 'Kurang Aktif'},
+    'X17': {0.0: 'Tidak', 1.0: 'Berhenti Merokok', 2.0: 'Ya'},
+    'X18': {0.0: 'Cukup Aktif', 1.0: 'Kurang Aktif'},
     'X19': {1.0: 'Ya', 2.0: 'Tidak'},
-    'X20': {1.0: 'Normal', 2.0: 'Prehypertension', 3.0: 'Hypertension stage 1', 
-            4.0: 'Hypertension stage 2'},
+    'X20': {0.0: 'Normal', 1.0: 'Prehypertension', 2.0: 'Hypertension stage 1', 
+            3.0: 'Hypertension stage 2'},
 }
 
 # Cache the model loading
@@ -136,7 +282,13 @@ def load_and_preprocess_data():
     load_and_preprocess_data()
 )
 
+# Add basic data validations
 if X_train is None or xgb_model is None:
+    st.error("Error: Data atau model tidak dapat dimuat.")
+    st.stop()
+
+if 'data' not in locals() or data is None:
+    st.error("Error: Dataset tidak dapat dimuat.")
     st.stop()
 
 # Rename columns in data for display purposes
@@ -162,11 +314,54 @@ st.write(
     """
 )
 
-# Sidebar for navigation
-st.sidebar.title("Navigasi")
-pages = ["Home", "EDA", "Prediksi", "Peta Risiko"]
-page = st.sidebar.radio("Pilih Halaman", pages)
+# Sidebar navigation
+st.sidebar.markdown(
+    f"""
+    <div class="nav-container">
+        <div class="nav-title">Navigasi</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
+# Replace empty label radio with proper label
+page = st.sidebar.radio(
+    "Navigasi",  # Added proper label
+    pages,
+    label_visibility="collapsed"  # Hide the label but keep it accessible
+)
+
+# Add app info in sidebar
+st.sidebar.markdown(
+    f"""
+    <div class="nav-container" style="margin-top: 2rem;">
+        <div class="nav-title">Tentang Aplikasi</div>
+        <p style="color: {COLOR_PALETTE['text']}; font-size: 0.9em; margin-top: 1rem;">
+            Versi 1.0.0<br>
+            Dikembangkan dengan Streamlit
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
+
+# Update main content container
+st.markdown('<div class="content-padding">', unsafe_allow_html=True)
+
+# Replace the title section with this enhanced header
+st.markdown(
+    f"""
+    <div class="metric-container">
+        <h1 style="text-align: center; font-size: 2.2em; margin-bottom: 10px;">Aplikasi Prediksi Obesitas</h1>
+        <p style="text-align: center; font-size: 1.2em;">Analisis & Prediksi Risiko Obesitas menggunakan Machine Learning</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# Update the page conditionals to match new navigation labels
 if page == "Home":
     st.header("Selamat Datang di Aplikasi Prediksi Obesitas")
     st.write(
@@ -178,7 +373,7 @@ if page == "Home":
         """
     )
 
-elif page == "EDA":
+elif page == "Analisis Data":
     st.header("Analisis Data Eksploratif (EDA)")
     
     # Create a dictionary mapping labels to column names
@@ -211,7 +406,7 @@ elif page == "EDA":
             fig.add_trace(go.Bar(
                 x=categories,
                 y=value_counts.values,
-                marker_color='#007bff'
+                marker_color=COLOR_PALETTE['primary']
             ))
             
             fig.update_layout(
@@ -244,7 +439,7 @@ elif page == "EDA":
             x=selected_feature,
             title=f"Analisis {selected_label}",
             template="plotly_white",
-            color_discrete_sequence=["#007bff"],
+            color_discrete_sequence=[COLOR_PALETTE['primary']],
             marginal="box"
         )
         fig.update_layout(
@@ -271,9 +466,8 @@ elif page == "EDA":
     if selected_feature in label_mappings:
         # Show value counts for categorical variables
         value_counts = plot_data[selected_feature].value_counts()
-        most_common = value_counts.index[0]
-        least_common = value_counts.index[-1]
-        
+        most_common = label_mappings[selected_feature].get(value_counts.index[0], value_counts.index[0])
+        least_common = label_mappings[selected_feature].get(value_counts.index[-1], value_counts.index[-1])
         with col1:
             st.metric("Kategori Terbanyak", f"{most_common}")
             st.metric("Total Kategori", f"{len(value_counts)}")
@@ -290,33 +484,141 @@ elif page == "EDA":
             st.metric("Total Data", f"{len(data[selected_feature]):,}")
 
 elif page == "Prediksi":
-    st.header("Prediksi Obesitas")
-    st.write("## Input Data")
-    input_data = {}
-    cols = st.columns(2)  # Create two columns for better layout
-    
-    for i, col_name in enumerate(X.columns):
-        col = cols[i % 2]
-        label = column_names_to_labels.get(col_name, col_name)
-        options = list(label_mappings[col_name].values())
-        selected_label = col.selectbox(
-            label,
-            options=options,
-            key=f"input_{i}"
-        )
-        # Convert selected label back to numeric value
-        numeric_value = [k for k, v in label_mappings[col_name].items() if v == selected_label][0]
-        input_data[col_name] = numeric_value
+    st.markdown(
+        f"""
+        <div class="header-container">
+            <h1 class="title">Prediksi Obesitas</h1>
+            <p class="subtitle">Masukkan data Anda untuk mendapatkan prediksi risiko obesitas</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    # Prediction
-    if st.button("Prediksi"):
+    # Group related inputs into sections
+    input_data = {}
+    
+    # Demographic Section
+    st.markdown(
+        f"""
+        <div class="box-container">
+            <h3 style="color: {COLOR_PALETTE['text']};">Data Demografis</h3>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    demo_col1, demo_col2 = st.columns(2)
+    demographic_vars = ['X1', 'X2', 'X3', 'X4', 'X5', 'X6']
+    
+    for i, col_name in enumerate(demographic_vars):
+        col = demo_col1 if i % 2 == 0 else demo_col2
+        with col:
+            label = column_names_to_labels.get(col_name, col_name)
+            options = list(label_mappings[col_name].values())
+            selected_label = st.selectbox(
+                label,
+                options=options,
+                key=f"demo_{i}",
+                help=f"Pilih {label.lower()} Anda"
+            )
+            numeric_value = [k for k, v in label_mappings[col_name].items() if v == selected_label][0]
+            input_data[col_name] = numeric_value
+
+    # Lifestyle Section
+    st.markdown(
+        f"""
+        <div class="box-container">
+            <h3 style="color: {COLOR_PALETTE['text']};">Pola Hidup</h3>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    life_col1, life_col2 = st.columns(2)
+    lifestyle_vars = ['X7', 'X17', 'X18']
+    
+    for i, col_name in enumerate(lifestyle_vars):
+        col = life_col1 if i % 2 == 0 else life_col2
+        with col:
+            label = column_names_to_labels.get(col_name, col_name)
+            options = list(label_mappings[col_name].values())
+            selected_label = st.selectbox(
+                label,
+                options=options,
+                key=f"life_{i}",
+                help=f"Pilih {label.lower()} Anda"
+            )
+            numeric_value = [k for k, v in label_mappings[col_name].items() if v == selected_label][0]
+            input_data[col_name] = numeric_value
+
+    # Dietary Habits Section
+    st.markdown(
+        f"""
+        <div class="box-container">
+            <h3 style="color: {COLOR_PALETTE['text']};">Pola Makan</h3>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    diet_cols = st.columns(4)
+    dietary_vars = ['X8', 'X9', 'X10', 'X11', 'X12', 'X13', 'X14', 'X15', 'X16']
+    
+    for i, col_name in enumerate(dietary_vars):
+        with diet_cols[i % 4]:
+            label = column_names_to_labels.get(col_name, col_name)
+            options = list(label_mappings[col_name].values())
+            selected_label = st.selectbox(
+                label,
+                options=options,
+                key=f"diet_{i}",
+                help=f"Pilih frekuensi konsumsi {label.lower()}"
+            )
+            numeric_value = [k for k, v in label_mappings[col_name].items() if v == selected_label][0]
+            input_data[col_name] = numeric_value
+
+    # Health Status Section
+    st.markdown(
+        f"""
+        <div class="box-container">
+            <h3 style="color: {COLOR_PALETTE['text']};">Status Kesehatan</h3>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    health_col1, health_col2 = st.columns(2)
+    health_vars = ['X19', 'X20']
+    
+    for i, col_name in enumerate(health_vars):
+        col = health_col1 if i % 2 == 0 else health_col2
+        with col:
+            label = column_names_to_labels.get(col_name, col_name)
+            options = list(label_mappings[col_name].values())
+            selected_label = st.selectbox(
+                label,
+                options=options,
+                key=f"health_{i}",
+                help=f"Pilih {label.lower()} Anda"
+            )
+            numeric_value = [k for k, v in label_mappings[col_name].items() if v == selected_label][0]
+            input_data[col_name] = numeric_value
+
+    # Prediction Button with enhanced styling
+    st.markdown("<br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        predict_button = st.button(
+            "Prediksi Sekarang",
+            help="Klik untuk melihat hasil prediksi",
+            key="predict_button"
+        )
+
+    # Rest of prediction logic
+    if predict_button:
         try:
             input_df = pd.DataFrame([input_data], columns=X.columns)
             prediction = xgb_model.predict(input_df)
 
             if prediction[0] == 1:
                 st.markdown(
-                    """
+                    f"""
                     <div class='metric-container'>
                         <h2 style='text-align: center;'>Prediksi: Risiko Tinggi Obesitas</h2>
                     </div>
@@ -371,71 +673,71 @@ elif page == "Prediksi":
 
 elif page == "Peta Risiko":
     st.header("Faktor Risiko Obesitas di Setiap Pulau di Indonesia")
+    
+    col_map, col_detail = st.columns([2, 1])
+    
+    with col_map:
+        # Define islands data
+        islands = {
+            "Sumatera": [-0.789275, 100.619385],
+            "Jawa": [-7.614529, 110.712246],
+            "Kalimantan": [-1.681487, 113.382354],
+            "Sulawesi": [-1.430421, 121.445617],
+            "Papua": [-4.269928, 138.080353],
+            "Bali_Nusa": [-8.409518, 115.188919],
+            "Maluku": [-3.23846, 130.14527],
+        }
 
-    # Define islands data
-    islands = {
-        "Sumatera": [-0.789275, 100.619385],
-        "Jawa": [-7.614529, 110.712246],
-        "Kalimantan": [-1.681487, 113.382354],
-        "Sulawesi": [-1.430421, 121.445617],
-        "Papua": [-4.269928, 138.080353],
-        "Bali_Nusa": [-8.409518, 115.188919],
-        "Maluku": [-3.23846, 130.14527],
-    }
+        island_name_to_int = {
+            "Sumatera": 1,
+            "Jawa": 2,
+            "Kalimantan": 3,
+            "Sulawesi": 4,
+            "Papua": 5,
+            "Bali_Nusa": 6,
+            "Maluku": 7,
+        }
 
-    island_name_to_int = {
-        "Sumatera": 1,
-        "Jawa": 2,
-        "Kalimantan": 3,
-        "Sulawesi": 4,
-        "Papua": 5,
-        "Bali_Nusa": 6,
-        "Maluku": 7,
-    }
+        # Create full-width map
+        m = folium.Map(
+            location=[-2.548926, 118.0148634], 
+            zoom_start=4, 
+            tiles="cartodb positron"
+        )
 
-    # Create full-width map
-    m = folium.Map(
-        location=[-2.548926, 118.0148634], zoom_start=4, tiles="cartodb positron"
-    )
+        # Add markers for each island with risk statistics
+        for island, coords in islands.items():
+            island_int = island_name_to_int[island]
+            island_data = data[data["Pulau"] == island_int]
+            obesity_risk = island_data["Y"].mean() * 100
 
-    # Add markers for each island with risk statistics
-    for island, coords in islands.items():
-        island_int = island_name_to_int[island]
-        island_data = data[data["Pulau"] == island_int]
-        obesity_risk = island_data["Y"].mean() * 100
+            popup_content = f"""
+            <div style='width: 200px'>
+                <h4>{island}</h4>
+                <p>Risiko Obesitas: {obesity_risk:.1f}%</p>
+                <p>Jumlah Sampel: {len(island_data)}</p>
+            </div>
+            """
 
-        popup_content = f"""
-        <div style='width: 200px'>
-            <h4>{island}</h4>
-            <p>Risiko Obesitas: {obesity_risk:.1f}%</p>
-            <p>Jumlah Sampel: {len(island_data)}</p>
-        </div>
-        """
+            folium.Marker(
+                location=coords,
+                popup=folium.Popup(popup_content, max_width=300),
+                tooltip=island,
+                icon=folium.Icon(
+                    color=COLOR_PALETTE['accent'] if obesity_risk > 50 else COLOR_PALETTE['primary'],
+                    icon="info-sign"
+                ),
+            ).add_to(m)
 
-        folium.Marker(
-            location=coords,
-            popup=folium.Popup(popup_content, max_width=300),
-            tooltip=island,
-            icon=folium.Icon(
-                color="red" if obesity_risk > 50 else "blue", icon="info-sign"
-            ),
-        ).add_to(m)
+        folium.LayerControl().add_to(m)
 
-    folium.LayerControl().add_to(m)
-
-    # Display the map
-    try:
-        folium_static(m)
-    except Exception as e:
-        st.error(f"Error displaying map: {e}")
-
-    # Add detail section below map with enhanced visualization
-    st.write("## Detail Faktor Risiko per Pulau")
-
-    # Create three columns for better layout
-    col1, col2, col3 = st.columns([1, 2, 1])
-
-    with col2:
+        # Display the map with adjusted size
+        try:
+            st_folium(m, width=None, height=400)
+        except Exception as e:
+            st.error(f"Error displaying map: {e}")
+    
+    with col_detail:
         selected_island = st.selectbox(
             "Pilih Pulau untuk melihat detail:",
             list(islands.keys()),
@@ -445,14 +747,14 @@ elif page == "Peta Risiko":
     if selected_island:
         st.markdown(
             f"""
-            <div class='metric-container'>
-                <h3 style='text-align: center;'>Analisis Faktor Risiko: {selected_island}</h3>
+            <div class='metric-container' style='margin-top: 1rem;'>
+                <h3 style='text-align: center; margin: 0;'>Analisis Faktor Risiko: {selected_island}</h3>
             </div>
         """,
             unsafe_allow_html=True,
         )
 
-        # Create two columns for statistics and chart
+        # Adjust column ratios for better layout
         stat_col, chart_col = st.columns([1, 2])
 
         with stat_col:
@@ -463,24 +765,25 @@ elif page == "Peta Risiko":
             metrics_container = st.container()
             with metrics_container:
                 st.markdown(
-                    """
+                    f"""
                     <style>
-                        .metric-box {
-                            background: white;
+                        .metric-box {{
+                            background: {COLOR_PALETTE['surface']};
                             padding: 15px;
-                            border-radius: 8px;
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                            border-radius: 12px;
+                            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                             margin: 10px 0;
-                        }
-                        .metric-label {
-                            color: #666;
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                        }}
+                        .metric-label {{
+                            color: {COLOR_PALETTE['text']};
                             font-size: 0.9em;
-                        }
-                        .metric-value {
-                            color: #007bff;
+                        }}
+                        .metric-value {{
+                            color: {COLOR_PALETTE['primary']};
                             font-size: 1.8em;
                             font-weight: bold;
-                        }
+                        }}
                     </style>
                 """,
                     unsafe_allow_html=True,
@@ -537,7 +840,7 @@ elif page == "Peta Risiko":
                 title=f"Top 5 Faktor Risiko di {selected_island}",
                 template="plotly_white",
                 height=400,
-                margin=dict(l=0, r=0, t=40, b=0),
+                margin=dict(l=0, r=0, t=30, b=0),  # Reduced top margin
                 xaxis_title="Tingkat Kepentingan",
                 yaxis_title="Faktor",
                 plot_bgcolor="rgba(0,0,0,0)",
@@ -564,7 +867,7 @@ elif page == "Peta Risiko":
                         labels=risk_dist["Status"],
                         values=risk_dist["Persentase"],
                         hole=0.3,
-                        marker=dict(colors=["#007bff", "#28a745"]),
+                        marker=dict(colors=[COLOR_PALETTE['primary'], COLOR_PALETTE['secondary']]),
                     )
                 ]
             )
@@ -572,12 +875,16 @@ elif page == "Peta Risiko":
             fig_pie.update_layout(
                 title="Distribusi Risiko Obesitas",
                 template="plotly_white",
-                height=300,
+                height=250,  # Reduced height
                 showlegend=True,
                 legend=dict(
                     orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5
                 ),
+                margin=dict(l=0, r=0, t=30, b=0),  # Reduced margins
             )
 
             st.plotly_chart(fig_pie, use_container_width=True, key="island_risk_distribution")
+
+# Close main content container at the end of the file
+st.markdown('</div>', unsafe_allow_html=True)
 
